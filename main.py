@@ -1,28 +1,11 @@
 import os
-import email  # اضافه کردن این خط برای رفع خطا
+import email
 import logging
 from logging_setup import setup_logging
 from email_connection import connect_to_email
-from data_processor import process_and_convert_to_xlsx
+from file_processor import extract_info_from_filename, process_and_save_excel
 from send_email import send_reports
-
-
-def log_summary():
-    logging.info("========== Project Summary ==========")
-    logging.info("1. هدف پروژه: دریافت، پردازش و ارسال فایل‌های اکسل حاوی داده‌های RFID.")
-    logging.info("2. مراحل انجام پروژه:")
-    logging.info("   - دریافت ایمیل‌ها و دانلود فایل‌های اکسل.")
-    logging.info("   - پردازش فایل‌های اکسل و جدا کردن داده‌ها بر اساس Tag ID.")
-    logging.info("   - تبدیل فایل‌های .xls به .xlsx.")
-    logging.info("   - ارسال فایل‌های پردازش شده به ایمیل مقصد.")
-    logging.info("3. ساختار فایل‌های پروژه:")
-    logging.info("   - `main.py`: اجرای کلی پروژه.")
-    logging.info("   - `email_connection.py`: اتصال به سرور ایمیل.")
-    logging.info("   - `data_processor.py`: پردازش داده‌های اکسل.")
-    logging.info("   - `send_email.py`: ارسال ایمیل.")
-    logging.info("   - `logging_setup.py`: تنظیمات لاگ.")
-    logging.info("4. نتیجه‌گیری: پروژه با موفقیت به پایان رسید و همه فایل‌ها به درستی پردازش و ارسال شدند.")
-    logging.info("======================================")
+from log_summary import log_summary
 
 
 def download_and_process_data():
@@ -54,15 +37,19 @@ def download_and_process_data():
 
                 if filename and filename.endswith('.xls'):
                     filepath = os.path.join(directory, filename)
-                    print(f"Saving file to: {filepath}")
+                    logging.info(f"Saving file to: {filepath}")
                     with open(filepath, "wb") as f:
                         f.write(part.get_payload(decode=True))
                     logging.info(f"Downloaded file: {filename}")
 
-                    output_filepaths = process_and_convert_to_xlsx(filepath)
-                    if output_filepaths:
-                        for output_filepath in output_filepaths:
-                            send_reports(output_filepath)
+                    extracted_info = extract_info_from_filename(filename)
+
+                    # پردازش و ذخیره فایل
+                    e200_filepath, e280_filepath = process_and_save_excel(filepath, directory, extracted_info)
+
+                    # ارسال فایل‌ها
+                    send_reports(e200_filepath)
+                    send_reports(e280_filepath)
 
     mail.logout()
 
